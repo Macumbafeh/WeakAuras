@@ -1643,7 +1643,7 @@ loadedFrame:SetScript("OnEvent", function(self, event, arg1)
 
             WeakAurasSaved = WeakAurasSaved or {};
             db = WeakAurasSaved;
-            db.debug = true
+            db.debug = false
 
             -- Defines the action squelch period after login
             -- Stored in SavedVariables so it can be changed by the user if they find it necessary
