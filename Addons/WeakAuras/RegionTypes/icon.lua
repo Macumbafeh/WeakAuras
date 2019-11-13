@@ -97,7 +97,9 @@ end
 
 local function modify(parent, region, data)
     local button, icon, cooldown, stacks = region.button, region.icon, region.cooldown, region.stacks;
-	
+
+	cooldown.hideRing = not data.cooldownRing
+
 	if LBF and not region.LBFGroup then
 		region.LBFGroup = LBF:Group("WeakAuras", region.frameId);
 		region.LBFGroup:Skin(data.BFskin, data.BFgloss, data.BFbackdrop);
@@ -320,9 +322,15 @@ local function modify(parent, region, data)
         UpdateValue(region.customValueFunc(data.trigger));
     end
     
-    local function UpdateDurationInfo(duration, expirationTime, customValue)
-        if(duration <= 0.01 or duration > region.duration or not data.stickyDuration) then
-            region.duration = duration;
+    local function UpdateDurationInfo(dur, expirationTime, customValue)
+		local duration = dur
+		local regionDuration = region.duration
+		
+		if not duration or type(duration) ~= "number" then duration = 0 end
+		if not regionDuration or type(regionDuration) ~= "number" then regionDuration = 0 end
+
+        if(duration <= 0.01 or duration > regionDuration or not data.stickyDuration) then
+            regionDuration = duration;
         end
         region.expirationTime = expirationTime;
         
@@ -396,16 +404,26 @@ local function modify(parent, region, data)
     end
     
     if(data.cooldown and WeakAuras.CanHaveDuration(data) == "timed") then
-        function region:SetDurationInfo(duration, expirationTime, customValue)
-            if(duration <= 0.01 or duration > region.duration or not data.stickyDuration) then
+        function region:SetDurationInfo(d, expirationTime, customValue)
+			local duration = d
+			if not duration then duration = 0 end
+			local regionDuration = region.duration
+			if not regionDuratino then regionDuration = 0 end
+			local dataStickyDuration = data.stickyDuration
+			if not dataStickyDuration then dataStickyDuration = 0 end
+
+            if(duration <= 0.01 or duration > regionDuration or not dataStickyDuration) then
                 region.duration = duration;
+				regionDuration = duration;
             end
+
             if(customValue or duration <= 0.01) then
                 cooldown:Hide();
             else
                 cooldown:Show();
-                cooldown:SetCooldown(expirationTime - region.duration, region.duration);
+                cooldown:SetCooldown(expirationTime - regionDuration, regionDuration);
             end
+
             UpdateDurationInfo(duration, expirationTime, customValue)
         end
     else

@@ -28,7 +28,13 @@ _G.FONT_COLOR_CODE_CLOSE = "|r"
 WeakAuras.function_strings = {
   count = [[
 return function(count)
-  if(count %s %s) then
+  local c = 0
+
+  if count ~= nil then
+    c = count
+  end
+
+  if(c %s %s) then
     return true
   else
     return false
@@ -540,6 +546,18 @@ WeakAuras.load_prototype = {
       values = "role_types",
       init = "arg"
     },
+    {
+      name = "inGroup",
+      display = L["In Group"],
+      type = "tristate",
+      init = "arg"
+    },
+    {
+      name = "battleShouting",
+      display = L["Battle Shouting"],
+      type = "tristate",
+      init = "arg"
+    },
   }
 };
 
@@ -740,19 +758,19 @@ WeakAuras.event_prototypes = {
         display = L["Power Type"],
         type = "select",
         values = "power_types",
-        init = "UnitPowerType(unit)"
+        init = "UnitManaType(unit)"
       },
       {
         name = "power",
         display = L["Power"],
         type = "number",
-        init = "UnitPower(unit)"
+        init = "UnitMana(unit)"
       },
       {
         name = "percentpower",
         display = L["Power (%)"],
         type = "number",
-        init = "(UnitPower(unit) / math.max(1, UnitPowerMax(unit))) * 100;"
+        init = "(UnitMana(unit) / math.max(1, UnitManaMax(unit))) * 100;"
       },
       {
         hidden = true,
@@ -760,7 +778,7 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit), math.max(1, UnitPowerMax(trigger.unit)), "fastUpdate";
+      return UnitMana(trigger.unit), math.max(1, UnitManaMax(trigger.unit)), "fastUpdate";
     end,
     automatic = true
   },
@@ -800,7 +818,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Holy Power"],
         type = "number",
-        init = "UnitPower(unit, 9)"
+        init = "UnitMana(unit, 9)"
       },
       {
         hidden = true,
@@ -808,10 +826,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, 9), math.max(1, UnitPowerMax(trigger.unit, 9)), true;
+      return UnitMana(trigger.unit, 9), math.max(1, UnitManaMax(trigger.unit, 9)), true;
     end,
     stacksFunc = function(trigger)
-      return UnitPower(trigger.unit, 9);
+      return UnitMana(trigger.unit, 9);
     end,
     automatic = true
   },
@@ -851,7 +869,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Demonic Fury"],
         type = "number",
-        init = "UnitPower(unit, SPELL_POWER_DEMONIC_FURY)"
+        init = "UnitMana(unit, SPELL_POWER_DEMONIC_FURY)"
       },
       {
         hidden = true,
@@ -859,10 +877,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_DEMONIC_FURY), math.max(1, UnitPowerMax(trigger.unit, SPELL_POWER_DEMONIC_FURY)), true;
+      return UnitMana(trigger.unit, SPELL_POWER_DEMONIC_FURY), math.max(1, UnitManaMax(trigger.unit, SPELL_POWER_DEMONIC_FURY)), true;
     end,
     stacksFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_DEMONIC_FURY);
+      return UnitMana(trigger.unit, SPELL_POWER_DEMONIC_FURY);
     end,
     automatic = true
   },
@@ -902,7 +920,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Burning Embers"],
         type = "number",
-        init = "UnitPower(unit, SPELL_POWER_BURNING_EMBERS)"
+        init = "UnitMana(unit, SPELL_POWER_BURNING_EMBERS)"
       },
       {
         hidden = true,
@@ -910,10 +928,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_BURNING_EMBERS, true), math.max(1, UnitPowerMax(trigger.unit, SPELL_POWER_BURNING_EMBERS, true)), true;
+      return UnitMana(trigger.unit, SPELL_POWER_BURNING_EMBERS, true), math.max(1, UnitManaMax(trigger.unit, SPELL_POWER_BURNING_EMBERS, true)), true;
     end,
     stacksFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_BURNING_EMBERS, true);
+      return UnitMana(trigger.unit, SPELL_POWER_BURNING_EMBERS, true);
     end,
     automatic = true
   },
@@ -953,7 +971,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Shadow Orbs"],
         type = "number",
-        init = "UnitPower(unit, SPELL_POWER_SHADOW_ORBS)"
+        init = "UnitMana(unit, SPELL_POWER_SHADOW_ORBS)"
       },
       {
         hidden = true,
@@ -961,10 +979,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_SHADOW_ORBS), math.max(1, UnitPowerMax(trigger.unit, SPELL_POWER_SHADOW_ORBS)), true;
+      return UnitMana(trigger.unit, SPELL_POWER_SHADOW_ORBS), math.max(1, UnitManaMax(trigger.unit, SPELL_POWER_SHADOW_ORBS)), true;
     end,
     stacksFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_SHADOW_ORBS);
+      return UnitMana(trigger.unit, SPELL_POWER_SHADOW_ORBS);
     end,
     automatic = true
   },
@@ -1004,7 +1022,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Chi Power"],
         type = "number",
-        init = "UnitPower(unit, SPELL_POWER_CHI)"
+        init = "UnitMana(unit, SPELL_POWER_CHI)"
       },
       {
         hidden = true,
@@ -1012,10 +1030,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_CHI), math.max(1, UnitPowerMax(trigger.unit, SPELL_POWER_CHI)), true;
+      return UnitMana(trigger.unit, SPELL_POWER_CHI), math.max(1, UnitManaMax(trigger.unit, SPELL_POWER_CHI)), true;
     end,
     stacksFunc = function(trigger)
-      return UnitPower(trigger.unit, SPELL_POWER_CHI);
+      return UnitMana(trigger.unit, SPELL_POWER_CHI);
     end,
     automatic = true
   },
@@ -1055,7 +1073,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Alternate Power"],
         type = "number",
-        init = "UnitPower(unit, 10)"
+        init = "UnitMana(unit, 10)"
       },
       {
         hidden = true,
@@ -1063,7 +1081,7 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, 10), math.max(1, UnitPowerMax(trigger.unit, 10)), "fastUpdate";
+      return UnitMana(trigger.unit, 10), math.max(1, UnitManaMax(trigger.unit, 10)), "fastUpdate";
     end,
     nameFunc = function(trigger)
       local _, _, _, _, _, _, _, _, _, name = UnitAlternatePowerInfo(trigger.unit);
@@ -1111,7 +1129,7 @@ WeakAuras.event_prototypes = {
         name = "power",
         display = L["Shards"],
         type = "number",
-        init = "UnitPower(unit, 7)"
+        init = "UnitMana(unit, 7)"
       },
       {
         hidden = true,
@@ -1119,10 +1137,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-      return UnitPower(trigger.unit, 7), math.max(1, UnitPowerMax(trigger.unit, 7)), true;
+      return UnitMana(trigger.unit, 7), math.max(1, UnitManaMax(trigger.unit, 7)), true;
     end,
     stacksFunc = function(trigger)
-      return UnitPower(trigger.unit, 7);
+      return UnitMana(trigger.unit, 7);
     end,
     automatic = true
   },
@@ -1146,7 +1164,7 @@ WeakAuras.event_prototypes = {
     local unit = unit or '%s';
     local concernedUnit = '%s';
     
-    local GetRealEclipseDirection = UnitPower(unit, 8) > 0 and "sun" or UnitPower(unit, 8) < 0 and "moon" or GetEclipseDirection();
+    local GetRealEclipseDirection = UnitMana(unit, 8) > 0 and "sun" or UnitMana(unit, 8) < 0 and "moon" or GetEclipseDirection();
     ]];
     
     return ret:format(trigger.unit, trigger.unit);
@@ -1172,7 +1190,7 @@ WeakAuras.event_prototypes = {
         name = "lunar_power",
         display = L["Lunar Power"],
         type = "number",
-        init = "math.min(UnitPower(unit, 8), -0) * -1",
+        init = "math.min(UnitMana(unit, 8), -0) * -1",
         enable = function(trigger)
           return trigger.eclipsetype == "moon"
         end
@@ -1181,7 +1199,7 @@ WeakAuras.event_prototypes = {
         name = "solar_power",
         display = L["Solar Power"],
         type = "number",
-        init = "math.max(UnitPower(unit, 8), 0)",
+        init = "math.max(UnitMana(unit, 8), 0)",
         enable = function(trigger)
           return trigger.eclipsetype == "sun"
         end
@@ -1192,10 +1210,10 @@ WeakAuras.event_prototypes = {
       }
     },
     durationFunc = function(trigger)
-    local GetRealEclipseDirection = UnitPower(trigger.unit, 8) > 0 and "sun" or UnitPower(trigger.unit, 8) < 0 and "moon" or GetEclipseDirection();
+    local GetRealEclipseDirection = UnitMana(trigger.unit, 8) > 0 and "sun" or UnitMana(trigger.unit, 8) < 0 and "moon" or GetEclipseDirection();
     
     if(not trigger.use_eclipsetype or trigger.eclipsetype == GetRealEclipseDirection) then
-    return math.max(math.abs(UnitPower(trigger.unit, 8)), 0), math.max(math.abs(UnitPowerMax(trigger.unit, 8)), 1), true;
+    return math.max(math.abs(UnitMana(trigger.unit, 8)), 0), math.max(math.abs(UnitManaMax(trigger.unit, 8)), 1), true;
     else
         return 0, 0, true;
       end
@@ -1232,7 +1250,13 @@ WeakAuras.event_prototypes = {
     args = {
       {}, -- timestamp ignored with _ argument
       {}, -- messageType ignored with _ argument (it is checked before the dynamic function)
-      {}, -- sourceGUID ignored with _ argument
+      {
+		name = "sourceGUID",
+		display = L["Source GUID"],
+		type = "string",
+		init = "arg",
+		enable = function() return true end
+	  }, -- sourceGUID ignored with _ argument
       {
         enable = function()
           local _, _, _, tocversion = GetBuildInfo()
@@ -1243,7 +1267,7 @@ WeakAuras.event_prototypes = {
         name = "sourceunit",
         display = L["Source Unit"],
         type = "unit",
-        test = "source and UnitIsUnit(source, '%s')",
+        test = "source and WeakAuras.UnitIsUnit(sourceGUID, source, '%s')",
         values = "actual_unit_types_with_specific",
         enable = function(trigger)
           return not (trigger.subeventPrefix == "ENVIRONMENTAL")
@@ -1370,15 +1394,15 @@ WeakAuras.event_prototypes = {
           return trigger.subeventSuffix and trigger.subeventPrefix and (trigger.subeventSuffix == "_DAMAGE" or trigger.subeventSuffix == "_MISSED" or trigger.subeventSuffix == "_HEAL" or trigger.subeventSuffix == "_ENERGIZE" or trigger.subeventSuffix == "_DRAIN" or trigger.subeventSuffix == "_LEECH" or trigger.subeventPrefix:find("DAMAGE"))
         end
       },
-      {
-        name = "overkill",
-        display = L["Overkill"],
-        type = "number",
-        init = "arg",
-        enable = function(trigger)
-          return trigger.subeventSuffix and trigger.subeventPrefix and (trigger.subeventSuffix == "_DAMAGE" or trigger.subeventPrefix == "DAMAGE_SHIELD" or trigger.subeventPrefix == "DAMAGE_SPLIT")
-        end
-      },
+      -- {
+        -- name = "overkill",
+        -- display = L["Overkill"],
+        -- type = "number",
+        -- init = "arg",
+        -- enable = function(trigger)
+          -- return trigger.subeventSuffix and trigger.subeventPrefix and (trigger.subeventSuffix == "_DAMAGE" or trigger.subeventPrefix == "DAMAGE_SHIELD" or trigger.subeventPrefix == "DAMAGE_SPLIT")
+        -- end
+      -- },
       {
         name = "overhealing",
         display = L["Overhealing"],

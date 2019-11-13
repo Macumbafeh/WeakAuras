@@ -167,8 +167,13 @@ local function modify(parent, region, data)
         UpdateValue(region.customValueFunc(data.trigger));
     end
     
-    function region:SetDurationInfo(duration, expirationTime, customValue)
-        if(duration <= 0.01 or duration > region.duration or not data.stickyDuration) then
+    function region:SetDurationInfo(d, expirationTime, customValue)
+		local duration = d
+		if not duration then duration = 0 end
+		local regionDuration = region.duration
+		if not regionDuration then regionDuration = 0 end
+		
+        if(duration <= 0.01 or duration > regionDuration or not data.stickyDuration) then
             region.duration = duration;
         end
         region.expirationTime = expirationTime;

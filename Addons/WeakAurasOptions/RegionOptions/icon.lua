@@ -11,6 +11,13 @@ local function createOptions(id, data)
             disabled = function() return not WeakAuras.CanHaveDuration(data); end,
             get = function() return WeakAuras.CanHaveDuration(data) and data.cooldown; end
         },
+        cooldownRing = {
+            type = "toggle",
+            name = L["Cooldown Ring"],
+            order = 5,
+            disabled = function() return not WeakAuras.CanHaveDuration(data); end,
+            get = function() return WeakAuras.CanHaveDuration(data) and data.cooldownRing; end
+        },
         auto = {
             type = "toggle",
             name = L["Automatic Icon"],
