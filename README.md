@@ -1,6 +1,6 @@
 # WeakAuras Backport to 2.4.3 TBC
 
-Attempting to backport current weakauras to TBC for use on the Excalibur server
+Attempting to backport current weakauras to TBC for use on the Netherwing server
 
 ## How To
 
