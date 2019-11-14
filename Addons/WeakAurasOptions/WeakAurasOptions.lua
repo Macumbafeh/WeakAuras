@@ -2105,6 +2105,7 @@ function WeakAuras.AddOption(id, data)
           start_message = {
             type = "input",
             name = L["Message"],
+			desc = L["Marker replacement text tooltip"],
             width = "double",
             order = 5,
             disabled = function() return not data.actions.start.do_message end

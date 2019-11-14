@@ -1569,6 +1569,116 @@ function WeakAuras.ConstructFunction(prototype, data, triggernum, subPrefix, sub
     return ret;
 end
 
+function WeakAuras.ConstructReplacementFunction(prototype, data, triggernum, subPrefix, subSuffix, field, inverse)
+    local trigger;
+    if (field == "load") then
+        trigger = data.load;
+    elseif (field == "untrigger") then
+        if (triggernum == 0) then
+            data.untrigger = data.untrigger or {};
+            trigger = data.untrigger;
+        else
+            trigger = data.additional_triggers[triggernum].untrigger;
+        end
+    else
+        if (triggernum == 0) then
+            trigger = data.trigger;
+        else
+            trigger = data.additional_triggers[triggernum].trigger;
+        end
+    end
+    local input = { "event" };
+    local required = {};
+    local tests = {};
+    local init;
+    if (prototype.init) then
+        init = prototype.init(trigger);
+    else
+        init = "";
+    end
+    for index, arg in pairs(prototype.args) do
+        local enable = true;
+        if (type(arg.enable) == "function") then
+            enable = arg.enable(trigger);
+        end
+        if (enable) then
+            local name = arg.name;
+            if not (arg.name or arg.hidden) then
+                tinsert(input, "_");
+            else
+                if (arg.init == "arg") then
+                    tinsert(input, name);
+                end
+                if (arg.hidden or arg.type == "tristate" or arg.type == "toggle" or (arg.type == "multiselect" and trigger["use_" .. name] ~= nil) or ((trigger["use_" .. name] or arg.required) and trigger[name])) then
+                    if (arg.init and arg.init ~= "arg") then
+                        init = init .. "local " .. name .. " = " .. arg.init .. "\n";
+                    end
+                    local number = tonumber(trigger[name]);
+                    local test;
+                    if (arg.type == "tristate") then
+                        if (trigger["use_" .. name] == false) then
+                            test = "(not " .. name .. ")";
+                        elseif (trigger["use_" .. name]) then
+                            if (arg.test) then
+                                test = "(" .. arg.test:format(trigger[name]) .. ")";
+                            else
+                                test = name;
+                            end
+                        end
+                    elseif (arg.type == "multiselect") then
+                        if (trigger["use_" .. name] == false) then
+                            test = "(";
+                            local any = false;
+                            for value, _ in pairs(trigger[name].multi) do
+                                test = test .. name .. "==" .. (tonumber(value) or "\"" .. value .. "\"") .. " or ";
+                                any = true;
+                            end
+                            if (any) then
+                                test = test:sub(0, -5);
+                            else
+                                test = "(false";
+                            end
+                            test = test .. ")";
+                        elseif (trigger["use_" .. name]) then
+                            local value = trigger[name].single;
+                            test = trigger[name].single and "(" .. name .. "==" .. (tonumber(value) or "\"" .. value .. "\"") .. ")";
+                        end
+                    elseif (arg.type == "toggle") then
+                        if (trigger["use_" .. name]) then
+                            if (arg.test) then
+                                test = "(" .. arg.test:format(trigger[name]) .. ")";
+                            else
+                                test = name;
+                            end
+                        end
+                    elseif (arg.test) then
+                        test = "(" .. arg.test:format(trigger[name]) .. ")";
+                    elseif (arg.type == "longstring" and trigger[name .. "_operator"]) then
+                        if (trigger[name .. "_operator"] == "==") then
+                            test = "(" .. name .. "==\"" .. trigger[name] .. "\")";
+                        else
+                            test = "(" .. name .. ":" .. trigger[name .. "_operator"]:format(trigger[name]) .. ")";
+                        end
+                    else
+                        if (type(trigger[name]) == "table") then
+                            trigger[name] = "error";
+                        end
+                        -- if arg.type == "number" and (trigger[name]) and not number then trigger[name] = 0 number = 0 end -- fix corrupt data, ticket #366
+                        test = "(" .. name .. (trigger[name .. "_operator"] or "==") .. (number or "\"" .. (trigger[name] or "") .. "\"") .. ")";
+                    end
+                    if (arg.required) then
+                        tinsert(required, test);
+                    else
+                        tinsert(tests, test);
+                    end
+                end
+            end
+        end
+    end
+
+	return "return function(" .. tconcat(input, ", ") .. ") return %s end";
+end
+
 local pending_aura_scans = {};
 
 WeakAuras.talent_types_specific = {}
@@ -1929,7 +2039,11 @@ function WeakAuras.ScanEvents(event, arg1, arg2, ...)
             for triggernum, data in pairs(triggers) do
                 if (data.trigger) then
                     if (data.trigger(event, arg1, arg2, ...)) then
-                        WeakAuras.ActivateEvent(id, triggernum, data, ...);
+						if data.replacement then
+							data.replacement.triggerData = { event, arg1, arg2, ... }
+						end
+
+                        WeakAuras.ActivateEvent( id, triggernum, data, event, arg1, arg2, ... )
                     else
                         if (data.untrigger and data.untrigger(event, arg1, arg2, ...)) then
                             WeakAuras.EndEvent(id, triggernum);
@@ -1941,7 +2055,7 @@ function WeakAuras.ScanEvents(event, arg1, arg2, ...)
     end
 end
 
-function WeakAuras.ActivateEvent(id, triggernum, data, ...)
+function WeakAuras.ActivateEvent(id, triggernum, data, event, arg1, arg2, ...)
     if (data.numAdditionalTriggers > 0) then
         if (data.region:EnableTrigger(triggernum)) then
         end
@@ -1949,7 +2063,7 @@ function WeakAuras.ActivateEvent(id, triggernum, data, ...)
         -- local tmp = {}
         -- tmp["region"] = data.region
         -- DevTools_Dump(tmp);
-        data.region:Expand();
+        data.region:Expand( event, arg1, arg2, ... );
     end
     WeakAuras.SetEventDynamics(id, triggernum, data);
 end
@@ -3551,7 +3665,7 @@ function WeakAuras.pAdd(data)
                         name_info = trigger.name_info
                     };
                 elseif (triggerType == "status" or triggerType == "event" or triggerType == "custom") then
-                    local triggerFuncStr, triggerFunc, untriggerFuncStr, untriggerFunc;
+                    local triggerFuncStr, triggerFunc, untriggerFuncStr, untriggerFunc, replacementFuncStr;
                     local trigger_events = {};
                     local durationFunc, nameFunc, iconFunc, stacksFunc;
                     if (triggerType == "status" or triggerType == "event") then
@@ -3568,11 +3682,14 @@ function WeakAuras.pAdd(data)
                         else
                             if (trigger.event == "Combat Log") then
                                 triggerFuncStr = WeakAuras.ConstructFunction(event_prototypes[trigger.event], data, triggernum, trigger.subeventPrefix, trigger.subeventSuffix);
+								replacementFuncStr = WeakAuras.ConstructReplacementFunction(event_prototypes[trigger.event], data, triggernum, trigger.subeventPrefix, trigger.subeventSuffix);
                             else
                                 triggerFuncStr = WeakAuras.ConstructFunction(event_prototypes[trigger.event], data, triggernum);
+								replacementFuncStr = WeakAuras.ConstructReplacementFunction(event_prototypes[trigger.event], data, triggernum);
                             end
                             WeakAuras.debug(id .. " - " .. triggernum .. " - Trigger", 1);
                             WeakAuras.debug(triggerFuncStr);
+							WeakAuras.debug(replacementFuncStr);
                             triggerFunc = WeakAuras.LoadFunction(triggerFuncStr);
 
                             durationFunc = event_prototypes[trigger.event].durationFunc;
@@ -3656,6 +3773,11 @@ function WeakAuras.pAdd(data)
                             end
                         end
                     end
+
+					data.replacement = {
+						triggerFuncStr = triggerFuncStr,
+						replacementFuncStr = replacementFuncStr
+					}
 
                     events[id] = events[id] or {};
                     events[id][triggernum] = {
@@ -3794,7 +3916,7 @@ function WeakAuras.SetRegion(data, cloneId)
                         end
                     end
 
-                    function region:Expand()
+                    function region:Expand( ... )
                         if (regionType == "model") then
                             region:EnsureModel();
                         end
@@ -3802,7 +3924,7 @@ function WeakAuras.SetRegion(data, cloneId)
                         parent:EnsureTrays();
                         if (WeakAuras.IsAnimating(region) == "finish" or region.groupHiding or (not region:IsVisible() or (cloneId and region.justCreated))) then
                             region.justCreated = nil;
-                            WeakAuras.PerformActions(data, "start");
+                            WeakAuras.PerformActions( data, "start", ... );
                             if not (WeakAuras.Animate("display", id, "start", data.animation.start, region, true, startMainAnimation, nil, cloneId)) then
                                 startMainAnimation();
                             end
@@ -3823,14 +3945,14 @@ function WeakAuras.SetRegion(data, cloneId)
                         end
                     end
 
-                    function region:Expand()
+                    function region:Expand( ... )
                         if (regionType == "model") then
                             region:EnsureModel()
                         end
                         if (WeakAuras.IsAnimating(region) == "finish" or (not region:IsVisible() or (cloneId and region.justCreated))) then
                             region.justCreated = nil;
                             region:Show();
-                            WeakAuras.PerformActions(data, "start");
+                            WeakAuras.PerformActions( data, "start", ... );
                             if not (WeakAuras.Animate("display", id, "start", data.animation.start, region, true, startMainAnimation, nil, cloneId)) then
                                 startMainAnimation();
                             end
@@ -3952,7 +4074,21 @@ function WeakAuras.Announce(message, output, _, extra, id, type)
     end
 end
 
-function WeakAuras.PerformActions(data, type)
+local function ReplaceMarkers( replacement, message, ... )
+	if not replacement or not replacement.replacementFuncStr then return message end
+	if not string.match( message, "${([a-zA-Z]+)}" ) then return message end
+
+	local result = message
+
+	for marker in string.gmatch( result, "${([a-zA-Z]+)}" ) do
+		local replacementFunc = WeakAuras.LoadFunction( string.format( replacement.replacementFuncStr, marker ) )
+		result = string.gsub( result, string.format( "${%s}", marker ), replacementFunc( ... ) or "N/A", 1 )
+	end
+
+	return result
+end
+
+function WeakAuras.PerformActions( data, type, ... )
     if not (paused or squelch_actions) then
         local actions;
         if (type == "start") then
@@ -3964,36 +4100,38 @@ function WeakAuras.PerformActions(data, type)
         end
 
         if (actions.do_message and actions.message_type and actions.message) then
+			local message = ReplaceMarkers( data.replacement, actions.message, ... )
+
             if (actions.message_type == "PRINT") then
             elseif (actions.message_type == "COMBAT") then
                 if (CombatText_AddMessage) then
-                    CombatText_AddMessage(actions.message, COMBAT_TEXT_SCROLL_FUNCTION, actions.r or 1, actions.g or 1, actions.b or 1);
+                    CombatText_AddMessage(message, COMBAT_TEXT_SCROLL_FUNCTION, actions.r or 1, actions.g or 1, actions.b or 1);
                 end
             elseif (actions.message_type == "WHISPER") then
                 if (actions.message_dest) then
                     if (actions.message_dest == "target" or actions.message_dest == "'target'" or actions.message_dest == "\"target\"" or actions.message_dest == "%t" or actions.message_dest == "'%t'" or actions.message_dest == "\"%t\"") then
-                        WeakAuras.Announce(actions.message, "WHISPER", nil, UnitName("target"), data.id, type);
+                        WeakAuras.Announce(message, "WHISPER", nil, UnitName("target"), data.id, type);
                     else
-                        WeakAuras.Announce(actions.message, "WHISPER", nil, actions.message_dest, data.id, type);
+                        WeakAuras.Announce(message, "WHISPER", nil, actions.message_dest, data.id, type);
                     end
                 end
             elseif (actions.message_type == "CHANNEL") then
                 local channel = actions.message_channel and tonumber(actions.message_channel);
                 if (GetChannelName(channel)) then
-                    WeakAuras.Announce(actions.message, "CHANNEL", nil, channel, data.id, type);
+                    WeakAuras.Announce(message, "CHANNEL", nil, channel, data.id, type);
                 end
             elseif (actions.message_type == "SMARTRAID") then
                 if UnitInBattleground("player") then
-                    SendChatMessage(actions.message, "INSTANCE_CHAT")
+                    SendChatMessage(message, "INSTANCE_CHAT")
                 elseif UnitInRaid("player") then
-                    SendChatMessage(actions.message, "RAID")
+                    SendChatMessage(message, "RAID")
                 elseif UnitInParty("player") then
-                    SendChatMessage(actions.message, "PARTY")
+                    SendChatMessage(message, "PARTY")
                 else
-                    SendChatMessage(actions.message, "SAY")
+                    SendChatMessage(message, "SAY")
                 end
             else
-                WeakAuras.Announce(actions.message, actions.message_type, nil, nil, data.id, type);
+                WeakAuras.Announce(message, actions.message_type, nil, nil, data.id, type);
             end
         end
 

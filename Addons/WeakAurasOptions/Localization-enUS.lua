@@ -160,6 +160,13 @@ There are several special codes available to make this text dynamic:
 |cFFFF0000%i|r - Icon - The icon associated with the display
 |cFFFF0000%s|r - Stacks - The number of stacks of an aura (usually)
 |cFFFF0000%c|r - Custom - Allows you to define a custom Lua function that returns a string value to be displayed]=]
+L["Marker replacement text tooltip"] = [=[
+Use |cFFFF0000${markerName}|r syntax to insert trigger values into your message.
+Here are example marker names:
+
+|cFFFF0000dest|r - Destination of a spell
+|cFFFF0000source|r - Source of a spell
+|cFFFF0000spellName|r - Spell name]=]
 L["Enabled"] = "Enabled"
 L["Enter an aura name, partial aura name, or spell id"] = "Enter an aura name, partial aura name, or spell id"
 L["Event Type"] = "Event Type"
